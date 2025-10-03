@@ -1,29 +1,40 @@
-const jwt=require('jsonwebtoken')
-const User=require("../models/user")
-const userAuth=async(req,res,next)=>
-{   try{
-      //read the token from the req cookies
-      const {token}=req.cookies;
-      if(!token)
-        {
-            throw new Error("INVALID TOKEN:!!!");
+// src/middlewares/auth.js
+const jwt = require('jsonwebtoken');
+const User = require("../models/user");
+const jwtkey=process.env.JWT_KEY
+const userAuth = async (req, res, next) => {
+    try {
+
+            const token = req.cookies.token;
+
+
+        // If there is no token, the user is not authenticated.
+        // This is why a 401 Unauthorized response is returned.
+        if (!token) {
+            return res.status(401).json({ message: "Please login to continue." }); // 401 Unauthorized
         }
 
-      const decoded=await jwt.verify(token,"devchat33$");
-      const {_id}=decoded;
-      const user=await User.findById(_id);
-      if(!user)
-        {
-            throw new Error("INVALID CREDENTIALS:!!!");
+        // Verify the token
+        const decoded = jwt.verify(token,jwtkey); // Replace with environment variable in production
+     
+        const { _id } = decoded;
+        // Find the user by ID
+        const user = await User.findById(_id);
+        if (!user) {
+            console.error("User not found with ID:", _id);
+            return res.status(401).json({ message: "Invalid credentials." }); // 401 Unauthorized
         }
+
+        // Attach user to request object
         req.user = user;
-        next();}
-        catch (err) {
-            res.status(400).send("Error saving the user: " + err.message);
-        }
-
+        // Proceed to the next middleware or route handler
+        next();
+    } catch (err) {
+        console.error("Authentication error:", err.message);
+        return res.status(401).json({ message: "Authentication failed: " + err.message }); // 401 Unauthorized
+    }
 };
 
-module.exports={
+module.exports = {
     userAuth
 };
